@@ -3,7 +3,7 @@
     "name"         : "IRC::Client::Plugin::HNY",
     "version"      : "1.001001",
     "description"  : "Plugin for New Year's IRC parties",
-    "depends"      : [ ],
+    "depends"      : [ "IRC::Client:ver<1.002001>" ],
     "test-depends" : [ "Test" ],
     "provides"     : {
         "IRC::Client::Plugin::HNY" : "lib/IRC/Client/Plugin/HNY.pm6"
