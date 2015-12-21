@@ -3,20 +3,21 @@
 use strict;
 use warnings;
 use Mojo::DOM;
-use Mojo::Util qw/spurt  b64_decode/;
+use Mojo::Util qw/spurt  b64_decode  encode  decode  slurp/;
 use Mojo::JSON qw/encode_json/;
 use Mojo::UserAgent;
 use 5.020;
 use experimental 'postderef';
 
-my $dom = Mojo::UserAgent->new
-    ->get(b64_decode 'aHR0cDovL3RpbWUuaXMvdGltZV96b25lcw==')->res->dom;
+my $dom = Mojo::DOM->new( decode 'utf8', slurp 'out.html' );
+
+# Mojo::UserAgent->new
+    #->get(b64_decode 'aHR0cDovL3RpbWUuaXMvdGltZV96b25lcw==')->res->dom;
 
 my @tzs;
 for my $d ( $dom->find('.section')->each ) {
     my $tz = { offset => $d->at('h1')->all_text };
-    my @countries = Mojo::DOM->new($d)
-        ->wrap('<zof></zof>')->find('zof > * > div > ul > li ')->each;
+    my @countries = Mojo::DOM->new("<zof>$d</zof>")->find('zof > * > div > ul > li ')->each;
     for my $cont_d ( @countries ) {
         my $name = $cont_d->children('a')->first->all_text;
         my @cities = $cont_d->find('li a')->map('all_text')->to_array->@*;
@@ -29,7 +30,15 @@ for my $d ( $dom->find('.section')->each ) {
     push @tzs, $tz;
 }
 
-spurt encode_json(\@tzs) => 'tzs.json';
+use Acme::Dump::And::Dumper;
+my $dump = DnD \@tzs;
+$dump =~ s/\A\s*\$VAR1\s+=\s+\[\s*|\s*\];\s*\z//g;
+$dump =~ s/\t/  /g;
+$dump =~ s/\\x\{([^\}]+)\}/\\x[$1]/g;
+
+spurt encode('utf8', $dump) => 'out.p6';
+
+# spurt encode_json(\@tzs) => '_dev/tzs.json';
 
 __END__
 
