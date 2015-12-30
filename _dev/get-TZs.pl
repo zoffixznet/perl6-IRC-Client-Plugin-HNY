@@ -16,7 +16,9 @@ my $dom = Mojo::DOM->new( decode 'utf8', slurp 'out.html' );
 
 my @tzs;
 for my $d ( $dom->find('.section')->each ) {
-    my $tz = { offset => $d->at('h1')->all_text };
+    my $tz = { offset => $d->at('h1')->all_text =~ s/UTC\+?//r };
+    $tz->{offset} =~ s/:(\d+)// and $tz->{offset} += $1/60;
+
     my @countries = Mojo::DOM->new("<zof>$d</zof>")->find('zof > * > div > ul > li ')->each;
     for my $cont_d ( @countries ) {
         my $name = $cont_d->children('a')->first->all_text;
@@ -34,6 +36,7 @@ use Acme::Dump::And::Dumper;
 my $dump = DnD \@tzs;
 $dump =~ s/\A\s*\$VAR1\s+=\s+\[\s*|\s*\];\s*\z//g;
 $dump =~ s/\t/  /g;
+$dump =~ s/(\s*)[\]]/,$1]/g;
 $dump =~ s/\\x\{([^\}]+)\}/\\x[$1]/g;
 
 spurt encode('utf8', $dump) => 'out.p6';
