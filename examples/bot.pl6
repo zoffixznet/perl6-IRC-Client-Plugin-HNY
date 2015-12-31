@@ -1,4 +1,4 @@
-use lib <lib ../lib>;
+use lib <lib ../lib /var/www/tmp/perl6-IRC-Client/lib>;
 use IRC::Client;
 use IRC::Client::Plugin::HNY;
 

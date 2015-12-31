@@ -2,40 +2,80 @@ use IRC::Client::Plugin;
 use WWW::Google::Time;
 use Lingua::Conjunction;
 use Number::Denominate;
+
 unit class IRC::Client::Plugin::HNY:ver<1.001001> is IRC::Client::Plugin;
+
+has Int $.short-announcement-at = 400;
 
 method irc-connected ($irc) {
     my $utc-hny = utc-hny;
     $irc.debug and say "UTC HNY is $utc-hny";
-    my @offsets = get-tzs;
-    my $prev-offset = 10;
-    for get-tzs() -> $tz {
-        my $cur-offset = $utc-hny.Instant + $tz<offset>*3600;
-        say "Starting prev {DateTime.new: $prev-offset}";
-        # announce-hny $irc, $tz, :next-new-year( $cur-offset - $prev-offset );
-        announce-hny $irc, $tz;
+    my $prev-offset = now + 10;
+    for get-tzs().reverse -> $tz {
+        my $tz-offset = $utc-hny.Instant - $tz<offset>*3600;
+        next if $tz-offset - now <= 0;
+        my $next-new-year = $tz-offset - $prev-offset;
         Promise.at( $prev-offset ).then: {
-            announce-hny $irc, $tz, :next-new-year( $cur-offset - $prev-offset )
+            announce-hny $irc, $tz,
+                :next-new-year($next-new-year),
+                :$!short-announcement-at;
+
+            CATCH { warn .backtrace }
         };
-        say "Starting cur {DateTime.new: $cur-offset}";
-        Promise.at( $cur-offset ).then: { announce-hny $irc, $tz };
-        $prev-offset = $cur-offset;
+        Promise.at( $tz-offset ).then: {
+            announce-hny $irc, $tz, :$!short-announcement-at;
+            CATCH { warn .backtrace }
+        };
+        $prev-offset = $tz-offset;
     }
     # say denominate $utc-hny.Instant - (DateTime.now.utc.Instant + (-5*3600) );
 }
 
-# method irc-privmsg-me ($irc, $e) { irc-me $irc, $e; }
-#
-# sub irc-me ($irc, $e) {
-#     return unless $e<params>[1] ~~ /^\s+ 'hny' (\s+ $<loc>=.+)?/;
-#     if ( $/<loc>.chars ) {
-#         return lookup-hny $/<loc>;
-#     }
-# }
+method irc-privmsg-me ($irc, $e) { irc-me $irc, $e; }
+method irc-notice-me ($irc, $e) { irc-me $irc, $e; }
+method irc-privmsg ($irc, $e) {
+    say "WTF? $e";
+    return IRC_NOT_HANDLED unless $e<params>[1] ~~ /"{$irc.nick}"/;
+    irc-me $irc, $e;
+}
 
+sub irc-me ($irc, $e) {
+    $irc.debug and say "HNY PLUGIN: triggered HNY";
+    my $command = $e<params>[1].subst: /^ "{$irc.nick}" \s* <[,:]>? \s*/, '';
+    say "HNY PLUGIN: $command";
+    return IRC_NOT_HANDLED
+        unless $command ~~ /^ \s* 'hny' [\s+ $<loc>=.+]?/;
 
+    $irc.debug and say "HNY PLUGIN: Looking up HNY in $<loc>";
+    if ( $<loc>.chars ) {
+        $irc.privmsg: $e<params>[0], lookup-hny ~$<loc>;
+    }
 
-sub announce-hny ($irc, Hash $tz, Instant :$next-new-year) {
+    return IRC_NOT_HANDLED;
+}
+
+sub lookup-hny (Str $where) {
+    my $gt = google-time-in $where;
+    my $offset = 0;
+    if $gt<tz> ~~ /^ 'GMT' $<offset>=(<[+-]> \d+)/ {
+        $offset = $/<offset>;
+    }
+    else {
+        my $abbr = get-tz-abbr().grep(*<abbr> eq $gt<tz>).first;
+        $abbr and $offset = $abbr<offset>;
+    }
+    say "Offset is $offset";
+    my $when = utc-hny().Instant - $offset*3600 - now;
+    return "New Year already happened in $gt<where>" if $when <= 0;
+    return "New Year in $gt<where> will happen in "
+        ~ denominate utc-hny().Instant - $offset*3600 - now ;
+}
+
+sub announce-hny (
+    $irc, Hash $tz,
+    :$next-new-year,
+    Int     :$short-announcement-at
+) {
     my @countries;
     for |$tz<countries> -> $country {
         @countries.append: $country<name> ~ (
@@ -43,12 +83,14 @@ sub announce-hny ($irc, Hash $tz, Instant :$next-new-year) {
         );
     }
 
-    my $prefix = $next-new-year ?? 'Happy New Year to'
-        !! "Next New Year is in {denominate $next-new-year} in";
+    my $prefix = $next-new-year
+        ?? "Next New Year is in {denominate $next-new-year} in"
+        !! 'Happy New Year to';
 
+    say "PREFIX DEBUG: $prefix [$next-new-year]";
     my $res = "$prefix {conjunction @countries}";
     $res = "$prefix {conjunction $tz<countries>.map: *<name>}"
-        unless $res.chars > 800;
+        if $res.chars > $short-announcement-at;
 
     for $irc.channels -> $chan {
         $irc.privmsg: $chan, $_ for $res.comb: /. ** 1..400/;
