@@ -15,7 +15,7 @@ method irc-connected ($irc) {
         my $tz-offset = $utc-hny.Instant - $tz<offset>*3600;
         next if $tz-offset - now <= 0;
         my $next-new-year = $tz-offset - $prev-offset;
-        Promise.at( $prev-offset ).then: {
+        Promise.at( $prev-offset + 2 ).then: {
             announce-hny $irc, $tz,
                 :next-new-year($next-new-year),
                 :$!short-announcement-at;
