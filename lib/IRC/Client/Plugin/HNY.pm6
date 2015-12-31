@@ -55,7 +55,8 @@ sub irc-me ($irc, $e) {
 }
 
 sub lookup-hny (Str $where) {
-    my $gt = google-time-in $where;
+    my $gt = try google-time-in $where
+        or return "I don't know what location that is";
     my $offset = 0;
     if $gt<tz> ~~ /^ 'GMT' $<offset>=(<[+-]> \d+)/ {
         $offset = $/<offset>;
