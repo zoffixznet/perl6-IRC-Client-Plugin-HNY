@@ -2,7 +2,7 @@ use IRC::Client;
 unit class IRC::Client::Plugin::HNY is IRC::Client::Plugin;
 
 my \term:<☃> = DateTime.new(year => .year + (1 if .month >= 6)).utc.Instant
-    given DateTime.new(:year(2016), :month(12)).utc;
+    given DateTime.now.utc;
 
 use WWW::Google::Time;
 use Number::Denominate;
