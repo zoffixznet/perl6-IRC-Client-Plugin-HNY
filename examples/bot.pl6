@@ -9,7 +9,7 @@ use IRC::Client::Plugin::HNY;
 .run with IRC::Client.new:
     :host(%*ENV<HNY_HOST> // 'irc.freenode.net')
     :nick<HNYBot>
-    :channels<#perl6 #zofbot>
+    :channels<#perl6 #zofbot #freenode-newyears>
     :debug
     :plugins[
         IRC::Client::Plugin::HNY.new,
