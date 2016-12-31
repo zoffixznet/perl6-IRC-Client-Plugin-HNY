@@ -1,6 +1,7 @@
 use lib <
     /home/zoffix/CPANPRC/IRC-Client/lib
     /home/zoffix/services/lib/IRC-Client/lib
+    /home/zoffix/services/lib/WWW-Google-Time/lib
     lib
 >;
 use IRC::Client;
