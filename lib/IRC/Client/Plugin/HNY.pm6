@@ -7,8 +7,11 @@ my \term:<☃> = DateTime.new(year => .year + (1 if .month >= 6)).utc.Instant
 use WWW::Google::Time;
 use Number::Denominate;
 
-method irc-to-me ($ where /:i ^\s* 'hny' \s+ $<where>=.+ /) {
-    my %info = (google-time-in ~$<where>
+method irc-to-me   ($ where /:i ^\s*  'hny' \s+ $<where>=.+ /) { hny ~$<where> }
+method irc-privmsg ($ where /:i ^\s* '!hny' \s+ $<where>=.+ /) { hny ~$<where> }
+
+sub hny ($where) {
+    my %info = (google-time-in $where
         or return 'Never heard of that place…');
 
     my \Δ = round ☃ - %info<DateTime>.clone(:0timezone).Instant;
