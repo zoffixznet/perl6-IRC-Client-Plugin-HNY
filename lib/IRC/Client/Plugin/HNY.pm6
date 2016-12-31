@@ -16,6 +16,6 @@ sub hny ($where) {
 
     my \Δ = round ☃ - %info<DateTime>.clone(:0timezone).Instant;
     Δ <= 0
-        ?? "New Year already happened in %info<where> &denominate(Δ) ago"
+        ?? "New Year already happened in %info<where> &denominate(abs Δ) ago"
         !! "New Year will happen in %info<where> in &denominate(Δ)";
 }
